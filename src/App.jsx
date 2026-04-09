@@ -15,6 +15,16 @@ const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov
 const PLATFORMS = ["Instagram","Facebook","Twitter/X","LinkedIn","TikTok"];
 const POST_TYPES = ["Image Post","Carousel","Story","Reel/Video","Text Post","Poll"];
 
+const GEMINI_MODELS = [
+  { id: "gemini-3-flash-preview", label: "Gemini 3 Flash Preview — fastest, frontier intelligence" },
+  { id: "gemini-3.1-pro-preview", label: "Gemini 3.1 Pro Preview — SOTA reasoning & coding" },
+  { id: "gemini-3.1-flash-lite-preview", label: "Gemini 3.1 Flash Lite — most cost-efficient" },
+  { id: "gemini-2.5-flash-preview-04-17", label: "Gemini 2.5 Flash Preview" },
+  { id: "gemini-2.5-pro-preview-03-25", label: "Gemini 2.5 Pro Preview" },
+  { id: "gemini-2.0-flash", label: "Gemini 2.0 Flash" },
+  { id: "gemini-2.0-flash-lite", label: "Gemini 2.0 Flash Lite" },
+];
+
 /* ─── localStorage wrapper ─── */
 const store = {
   get(k) { try { const v = localStorage.getItem("sf_" + k); return v ? JSON.parse(v) : null; } catch { return null; } },
@@ -23,11 +33,12 @@ const store = {
 };
 
 /* ─── Gemini AI ─── */
-async function askAgent(systemPrompt, userPrompt, apiKey) {
+async function askAgent(systemPrompt, userPrompt, apiKey, model) {
   if (!apiKey) return "⚠ Please add your Gemini API key in the Settings tab first.";
+  const m = model || store.get("gemini_model") || "gemini-3-flash-preview";
   try {
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,9 +89,10 @@ function Tags({ items, selected, onToggle }) { return <div style={{ display: "fl
 /* ─── Settings ─── */
 function SettingsTab() {
   const [key, setKey] = useState(() => store.get("gemini_key") || "");
+  const [model, setModel] = useState(() => store.get("gemini_model") || "gemini-3-flash-preview");
   const [saved, setSaved] = useState(false);
   const [visible, setVisible] = useState(false);
-  const save = () => { store.set("gemini_key", key); setSaved(true); setTimeout(() => setSaved(false), 2000); };
+  const save = () => { store.set("gemini_key", key); store.set("gemini_model", model); setSaved(true); setTimeout(() => setSaved(false), 2000); };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -94,19 +106,24 @@ function SettingsTab() {
           <Input value={key} onChange={setKey} placeholder="AIza..." type={visible ? "text" : "password"} style={{ flex: 1 }} />
           <Btn small variant="ghost" onClick={() => setVisible(!visible)}>{visible ? "Hide" : "Show"}</Btn>
         </div>
-        <div style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center" }}>
-          <Btn onClick={save}>Save Key</Btn>
-          {saved && <span style={{ color: "#22c55e", fontSize: 13 }}>✓ Saved</span>}
-        </div>
       </Card>
       <Card>
         <Label>Model</Label>
-        <p style={{ color: "#cbd5e1", fontSize: 14 }}>Gemini 2.0 Flash — fast, capable, generous free tier</p>
+        <p style={{ color: "#64748b", fontSize: 13, marginBottom: 12, lineHeight: 1.6 }}>
+          Choose which Gemini model powers the AI features. Pro models are more capable but slower; Flash models are faster and have generous free tiers.
+        </p>
+        <select value={model} onChange={e => setModel(e.target.value)} style={{ width: "100%", background: "#0a0f1a", border: "1px solid #1e293b", borderRadius: 8, color: "#e2e8f0", padding: "10px 12px", fontSize: 14, fontFamily: "'DM Sans',sans-serif" }}>
+          {GEMINI_MODELS.map(m => <option key={m.id} value={m.id}>{m.label}</option>)}
+        </select>
       </Card>
+      <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+        <Btn onClick={save}>Save Settings</Btn>
+        {saved && <span style={{ color: "#22c55e", fontSize: 13 }}>✓ Saved</span>}
+      </div>
       <Card>
         <Label>Reset All Data</Label>
         <p style={{ color: "#64748b", fontSize: 13, marginBottom: 12 }}>Clear everything: brand, calendar, copies, campaigns, metrics, API key.</p>
-        <Btn small variant="ghost" onClick={() => { const keys = ["brand","calendar","copies","imagePrompts","campaigns","metrics","gemini_key"]; keys.forEach(k => store.del(k)); window.location.reload(); }} style={{ color: "#ef4444", borderColor: "#ef4444" }}>Reset All Data</Btn>
+        <Btn small variant="ghost" onClick={() => { const keys = ["brand","calendar","copies","imagePrompts","campaigns","metrics","gemini_key","gemini_model"]; keys.forEach(k => store.del(k)); window.location.reload(); }} style={{ color: "#ef4444", borderColor: "#ef4444" }}>Reset All Data</Btn>
       </Card>
     </div>
   );
